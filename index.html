@@ -63,7 +63,7 @@ button{font:inherit;color:inherit}:focus-visible{outline:2px solid var(--pop);ou
 <section class="prof" id="prof" hidden></section>
 <nav class="nav"><button data-t="home" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg><span>Home</span></button><button id="plus" class="plus" aria-label="Post">+</button><button data-t="me"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.500-4-6-9-6z"/></svg><span>Profile</span></button></nav>
 
-<div class="sheet" id="auth"><div class="card" role="dialog" aria-label="Log in"><h2 id="auH">Create your account</h2><input type="text" id="auE" placeholder="Username" autocomplete="username" autocapitalize="off" maxlength="20"><input type="password" id="auP" placeholder="Password (6+ characters)" autocomplete="current-password"><div class="row"><button class="btn" id="auGo">Continue</button><button class="btn alt" id="auT">I have an account</button><button class="btn alt" id="auX">Close</button></div><p class="note" id="auN"></p></div></div>
+<div class="sheet" id="auth"><div class="card" role="dialog" aria-label="Log in"><h2 id="auH">Welcome to Loopy</h2><p class="note" style="margin:0">Type a name to get started. No email or password.</p><input type="text" id="auE" placeholder="Your name" maxlength="30" autocomplete="off"><input type="password" id="auP" hidden><div class="row"><button class="btn" id="auGo">Continue</button><button class="btn alt" id="auT" hidden>I have an account</button><button class="btn alt" id="auX">Close</button></div><p class="note" id="auN"></p></div></div>
 
 <div class="sheet" id="prSheet"><div class="card" role="dialog" aria-label="Profile"><h2 id="pT">Create your account</h2><input type="text" id="pDn" maxlength="30" placeholder="Your name"><input type="text" id="pUn" maxlength="20" placeholder="Choose a username" autocapitalize="off" autocomplete="off"><input type="text" id="pBio" maxlength="80" placeholder="Bio (optional)"><div class="row" id="pSw"></div><div class="row"><span class="av" id="pPrev"></span><button class="btn alt" id="pPicB">Change photo</button><input type="file" id="pPic" accept="image/*" hidden></div><div class="row"><button class="btn" id="pSave">Save</button><button class="btn alt" id="pX">Cancel</button></div><p class="note" id="pN"></p></div></div>
 
@@ -101,7 +101,7 @@ function needProf(){if(!need())return false;if(!mp()){openProf();return false}re
 async function load(){const[a,b,c,d,e]=await Promise.all([sb.from('posts').select('*').order('created_at',{ascending:false}).limit(60),sb.from('profiles').select('*').limit(1000),sb.from('likes').select('*').limit(5000),sb.from('follows').select('*').limit(5000),sb.from('comments').select('*').order('created_at').limit(2000)]);
  posts=a.data||[];profs={};(b.data||[]).forEach(p=>profs[p.id]=p);likes=c.data||[];follows=d.data||[];coms=e.data||[];
  build();refresh();names();if(viewing)showProfile(viewing);if(cmPid)renderComs();
- if(me&&!mp()&&!asked){asked=1;openProf()}}
+ if(me&&!mp()&&!asked&&!window._mk){asked=1;openProf()}}
 sb.auth.onAuthStateChange((_e,s)=>{me=s?s.user:null;asked=0;sig='';load()});
 sb.auth.getSession().then(r=>{me=r.data.session?r.data.session.user:null;load()});
 setInterval(()=>{if(!document.hidden)load()},15000);
@@ -158,12 +158,15 @@ $('cmIn').onkeydown=e=>{if(e.key==='Enter')$('cmS').click()};
 // ---- accounts
 $('auT').onclick=()=>{authMode=authMode==='up'?'in':'up';$('auH').textContent=authMode==='up'?'Create your account':'Log in';$('auT').textContent=authMode==='up'?'I have an account':'Create an account'};
 $('auX').onclick=()=>hide('auth');
-$('auGo').onclick=async()=>{const un=$('auE').value.trim().toLowerCase(),password=$('auP').value;$('auN').textContent='';
- if(!/^[a-z0-9_.]{3,20}$/.test(un)){$('auN').textContent='Usernames are 3 to 20 letters, numbers, _ or .';return}
- if(password.length<6){$('auN').textContent='Your password needs at least 6 characters.';return}
- const email=un+'@loopy-login.com',r=authMode==='up'?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
- if(r.error){const m=r.error.message||'';$('auN').textContent=/already registered/i.test(m)?'That username is taken. Try another, or tap I have an account.':/invalid login/i.test(m)?'Wrong username or password.':m;return}
- if(authMode==='up'&&!r.data.session){$('auN').textContent='Sign-up needs “Confirm email” turned off in Supabase.';return}hide('auth')};
+$('auGo').onclick=async()=>{const name=$('auE').value.trim();$('auN').textContent='';
+ if(name.length<2){$('auN').textContent='Please type a name (at least 2 characters).';return}
+ $('auGo').disabled=true;window._mk=1;
+ const r=await sb.auth.signInAnonymously();
+ if(r.error){window._mk=0;$('auGo').disabled=false;$('auN').textContent=/anonymous/i.test(r.error.message)?'Anonymous sign-ins are turned off in Supabase.':r.error.message;return}
+ me=r.data.user;const base=name.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12)||'user',color=SW[Math.floor(Math.random()*SW.length)];let ok=false;
+ for(let k=0;k<5&&!ok;k++){const un=base+Math.floor(1000+Math.random()*9000),p=await sb.from('profiles').insert({id:me.id,username:un,display_name:name.slice(0,30),color});if(!p.error)ok=true}
+ window._mk=0;$('auGo').disabled=false;if(!ok){$('auN').textContent='Couldn’t create your profile. Try again.';return}
+ hide('auth');toast('Welcome, '+name+'!');await load()};
 SW.forEach(c=>{const b=el('button','sw');b.style.background=c;b.dataset.c=c;b.setAttribute('aria-label','Colour '+c);b.onclick=()=>{swatch=c;markSw();if(!picUrl)setAv($('pPrev'),{display_name:$('pDn').value||'?',color:c})};$('pSw').append(b)});
 function markSw(){[...$('pSw').children].forEach(b=>b.classList.toggle('on',b.dataset.c===swatch))}
 function openProf(){const q=mp();$('pDn').value=q?q.display_name:'';$('pUn').value=q?q.username:'';{const lu=me&&me.email&&me.email.endsWith('@loopy-login.com')?me.email.split('@')[0]:'';if(lu)$('pUn').value=lu;$('pUn').readOnly=!!lu}$('pBio').value=q?q.bio||'':'';swatch=q?q.color:SW[0];picUrl=q&&q.pic||'';markSw();
@@ -206,7 +209,7 @@ function showProfile(u){if(!u)return;viewing=u;const q=profs[u]||{display_name:'
  const h=el('div','ph'),av=el('span','av');setAv(av,q);const lk=ps.reduce((a,p)=>a+lc(p.id),0);
  h.append(av,el('h2',null,q.display_name),el('p','bio','@'+q.username+(q.bio?' · '+q.bio:'')));
  const st=el('div','stats');[[ps.length,'Posts'],[fc(u),'Followers'],[follows.filter(f=>f.follower_id===u).length,'Following'],[lk,'Likes']].forEach(([n,l])=>{const d=el('div');d.append(el('b',null,String(n)),el('span',null,l));st.append(d)});h.append(st);
- if(own){const e=el('button','btn alt','Edit profile');e.onclick=openProf;const o=el('button','btn alt','Log out');o.onclick=async()=>{await sb.auth.signOut();tab('home');toast('Logged out')};const r=el('div','row');r.style.justifyContent='center';r.append(e,o);h.append(r)}
+ if(own){const e=el('button','btn alt','Edit profile');e.onclick=openProf;const o=el('button','btn alt','Log out');o.onclick=async()=>{await sb.auth.signOut();tab('home');toast('Logged out')};const r=el('div','row');r.style.justifyContent='center';r.append(e);if(!me.is_anonymous)r.append(o);h.append(r)}
  else{const on=isFol(u),f=el('button','btn'+(on?' alt':''),on?'Following':'Follow');f.onclick=()=>toggleFollow(u);h.append(f)}
  P.append(h);if(!own)ptab='posts';
  if(own){const tb=el('div','ptabs');[['posts',GRID,'Your posts'],['liked',HEART,'Videos you liked']].forEach(([k,ic,lb])=>{const b=el('button',ptab===k?'on':'');b.setAttribute('aria-label',lb);b.innerHTML=ic;b.onclick=()=>{ptab=k;showProfile(u)};tb.append(b)});P.append(tb)}
