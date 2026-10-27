@@ -55,13 +55,17 @@ button{font:inherit;color:inherit}:focus-visible{outline:2px solid var(--pop);ou
 .ur{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 4px;width:100%;border-bottom:1px solid #eee}.ur small{color:var(--dim);display:block}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#171229;color:#fff;padding:.6rem 1rem;border-radius:12px;font-weight:700;z-index:20;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%}.toast.show{opacity:1}
 .inprof .top{display:none}
+a.btn{text-decoration:none;display:inline-block}.gf{position:fixed;inset:0;z-index:13;background:#fff;color:#171229;display:flex;flex-direction:column}.gfh{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px}.gf iframe{flex:1;border:0;width:100%;background:#fff}
+.gl{display:grid;gap:12px;padding:0 20px 20px}.gc{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:18px;border-radius:16px;background:#f4f2f8;color:#171229;font-size:1.1rem;font-weight:700}.gc span{background:#7ef0d0;border-radius:99px;padding:.4rem 1rem}.gc:focus-visible{outline:2px solid #171229;outline-offset:3px}
+.tile{position:relative}.vc{position:absolute;left:6px;bottom:6px;color:#fff;font-weight:700;font-size:.8rem;text-shadow:0 1px 4px rgba(0,0,0,.7)}
 </style>
 </head>
 <body>
 <div class="top"><div class="mt"><button id="mFol">Following</button><button id="mAll" class="on">For You</button></div><div class="tr"><button class="btn alt" id="snd">Sound off</button><button class="btn alt ic" id="srB" aria-label="Search accounts"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button></div></div>
 <div class="feed" id="feed"></div>
 <section class="prof" id="prof" hidden></section>
-<nav class="nav"><button data-t="home" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg><span>Home</span></button><button id="plus" class="plus" aria-label="Post">+</button><button data-t="me"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.500-4-6-9-6z"/></svg><span>Profile</span></button></nav>
+<section class="prof" id="games" hidden></section>
+<nav class="nav"><button data-t="home" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg><span>Home</span></button><button data-t="games"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6h10a5 5 0 015 5v4a3 3 0 01-5.2 2L15 15H9l-1.8 2A3 3 0 012 15v-4a5 5 0 015-5zm0 3v2H5v2h2v2h2v-2h2v-2H9V9H7zm9 1.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg><span>Games</span></button><button id="plus" class="plus" aria-label="Post">+</button><button data-t="me"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.500-4-6-9-6z"/></svg><span>Profile</span></button></nav>
 
 <div class="sheet" id="auth"><div class="card" role="dialog" aria-label="Log in"><h2 id="auH">Welcome to Loopy</h2><p class="note" style="margin:0">Type a name to get started. No email or password.</p><input type="text" id="auE" placeholder="Your name" maxlength="30" autocomplete="off"><input type="password" id="auP" hidden><div class="row"><button class="btn" id="auGo">Continue</button><button class="btn alt" id="auT" hidden>I have an account</button><button class="btn alt" id="auX">Close</button></div><p class="note" id="auN"></p></div></div>
 
@@ -77,6 +81,7 @@ button{font:inherit;color:inherit}:focus-visible{outline:2px solid var(--pop);ou
 <div class="sheet cm" id="cm"><div class="card" role="dialog" aria-label="Comments"><div class="row" style="justify-content:space-between"><b id="cmT">Comments</b><button class="btn alt" id="cmX">Close</button></div><div class="cml" id="cml"></div><div class="row" style="flex-wrap:nowrap"><input type="text" id="cmIn" maxlength="200" placeholder="Add a comment" aria-label="Add a comment"><button class="btn" id="cmS">Send</button></div></div></div>
 
 <div class="srch" id="srch" hidden><div class="sh"><input type="text" id="q" placeholder="Search accounts" autocomplete="off" aria-label="Search accounts"><button class="btn alt" id="qx">Close</button></div><div id="res"></div></div>
+<div class="gf" id="gf" hidden><div class="gfh"><button class="btn alt" id="gfX">Close</button><b id="gfN"></b><a class="btn alt" id="gfO" target="_blank" rel="noopener">Open in new tab</a></div><iframe id="gfF" title="Game" allow="fullscreen; autoplay; gamepad"></iframe></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -116,7 +121,7 @@ function mk(p){const sl=el('section','slide'),vd=p.kind==='video',m=document.cre
  if(p.fx&&FX[p.fx])m.style.filter=FX[p.fx];sl.append(m);
  if(p.tt){const t=el('div','tov',p.tt);t.style.cssText='left:'+(p.tpx??50)+'%;top:'+(p.tpy??45)+'%;color:'+(p.tc||'#fff');sl.append(t)}
  const info=el('div','info'),who=el('div','who'),av=el('span','av'),nm=el('span');who.append(av,nm);who.onclick=e=>{e.stopPropagation();showProfile(p.user_id)};
- const cap=el('p','cap');(p.caption||'').split(/(#\w+)/g).forEach(t=>{if(/^#\w+$/.test(t))cap.append(el('b',null,t));else cap.append(t)});info.append(who,cap);
+ const cap=el('p','cap');(p.caption||'').split(/(#\w+)/g).forEach(t=>{if(/^#\w+$/.test(t))cap.append(el('b',null,t));else cap.append(t)});const vw=el('div','cap',fmt(p.views||0)+' views');vw.style.cssText='font-size:.8rem;opacity:.85';info.append(who,cap,vw);
  const rail=el('div','rail'),ra=el('button','ra'),rav=el('span','av');ra.setAttribute('aria-label','Open profile');ra.append(rav);ra.onclick=e=>{e.stopPropagation();showProfile(p.user_id)};
  if(!me||(p.user_id!==me.id&&!isFol(p.user_id))){const f=el('i','fp','+');f.onclick=e=>{e.stopPropagation();toggleFollow(p.user_id)};ra.append(f)}
  const lb=el('button','rb'),lcn=el('span');lb.setAttribute('aria-label','Like');lb.innerHTML=HEART;lb.append(lcn);lb.onclick=e=>{e.stopPropagation();toggleLike(p.id)};
@@ -130,7 +135,7 @@ function mk(p){const sl=el('section','slide'),vd=p.kind==='video',m=document.cre
  sl.addEventListener('click',()=>{clearTimeout(tt);tt=setTimeout(()=>{if(o.vid){o.vid.paused?o.vid.play().catch(()=>{}):o.vid.pause()}},260);document.querySelectorAll('.menu.open').forEach(x=>x.classList.remove('open'))});
  sl.addEventListener('dblclick',()=>{clearTimeout(tt);if(!isLk(p.id))toggleLike(p.id)});io.observe(sl);return o}
 const io=new IntersectionObserver(es=>es.forEach(e=>{const o=slides.find(s=>s.el===e.target);if(!o)return;
- if(e.isIntersecting&&e.intersectionRatio>.6){if(active&&active!==o&&active.vid)active.vid.pause();active=o;if(o.vid)o.vid.play().catch(()=>{})}else if(o.vid)o.vid.pause()}),{root:feed,threshold:[.6]});
+ if(e.isIntersecting&&e.intersectionRatio>.6){if(active&&active!==o&&active.vid)active.vid.pause();active=o;countView(o.p);if(o.vid)o.vid.play().catch(()=>{})}else if(o.vid)o.vid.pause()}),{root:feed,threshold:[.6]});
 function refresh(){slides.forEach(o=>{o.lb.classList.toggle('on',isLk(o.p.id));o.lcn.textContent=fmt(lc(o.p.id));o.ccn.textContent=fmt(cc(o.p.id))})}
 function names(){slides.forEach(o=>{const q=profs[o.p.user_id];o.nm.textContent=q?'@'+q.username+(me&&q.id===me.id?' (you)':''):'someone';setAv(o.av,q);setAv(o.rav,q)})}
 async function delPost(p){const r=await sb.from('posts').delete().eq('id',p.id);if(r.error){toast('Couldn’t delete that post');return}
@@ -212,8 +217,19 @@ async function quickJoin(showIt){if(window._mk)return;window._mk=1;toast('Settin
  for(let k=0;k<5&&!ok;k++){const p=await sb.from('profiles').insert({id:me.id,username:'guest'+Math.floor(10000+Math.random()*90000),display_name:nm,color:SW[Math.floor(Math.random()*SW.length)]});if(!p.error)ok=true}
  window._mk=0;if(!ok){toast('Couldn’t create your profile. Try again.');return}
  await load();toast('You’re in as '+nm+'. Tap Edit profile to change your name.');if(showIt&&me)showProfile(me.id)}
+// ---- views
+function countView(p){if(!p||(me&&p.user_id===me.id))return;let seen=[];try{seen=JSON.parse(localStorage.getItem('loopy_seen')||'[]')}catch(e){}
+ if(seen.includes(p.id))return;clearTimeout(countView.t);
+ countView.t=setTimeout(()=>{if(!active||active.p.id!==p.id)return;seen.push(p.id);try{localStorage.setItem('loopy_seen',JSON.stringify(seen.slice(-500)))}catch(e){}p.views=(p.views||0)+1;sb.rpc('add_view',{pid:p.id}).then(()=>{})},1500)}
+// ---- games
+const GAMES=[{n:'Lemon Games',u:'https://lemon-games-6.vercel.app'},{n:'Penguin Knockout',u:'https://penguin-knockout-nine.vercel.app'}];
+function buildGames(){const g=$('games');g.innerHTML='';const h=el('div','ph');h.append(el('h2',null,'Games'),el('p','bio','Tap a game to play it inside Loopy.'));g.append(h);
+ const l=el('div','gl');GAMES.forEach(x=>{const b=el('button','gc');b.append(el('b',null,x.n),el('span',null,'Play'));b.onclick=()=>playGame(x);l.append(b)});g.append(l)}
+function playGame(x){$('gfN').textContent=x.n;$('gfF').src=x.u;$('gfO').href=x.u;$('gf').hidden=false}
+function showGames(){tab('home');if(active&&active.vid)active.vid.pause();$('games').hidden=false;document.body.classList.add('inprof');document.querySelectorAll('.nav [data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t==='games'))}
+$('gfX').onclick=()=>{$('gf').hidden=true;$('gfF').src='about:blank'};buildGames();
 // ---- profile page, tabs, search
-function tab(n){const pf=n==='prof';$('prof').hidden=!pf;document.body.classList.toggle('inprof',pf);document.querySelectorAll('.nav [data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===(pf?'me':'home')));
+function tab(n){const pf=n==='prof';$('games').hidden=true;$('prof').hidden=!pf;document.body.classList.toggle('inprof',pf);document.querySelectorAll('.nav [data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===(pf?'me':'home')));
  if(active&&active.vid){pf?active.vid.pause():active.vid.play().catch(()=>{})}if(!pf)viewing=null}
 function showProfile(u){if(!u)return;viewing=u;const q=profs[u]||{display_name:'Someone',username:'someone',bio:'',color:'#b3a9c9'},ps=posts.filter(p=>p.user_id===u),own=!!me&&u===me.id,P=$('prof');P.innerHTML='';
  const h=el('div','ph'),av=el('span','av');setAv(av,q);const lk=ps.reduce((a,p)=>a+lc(p.id),0);
@@ -224,11 +240,11 @@ function showProfile(u){if(!u)return;viewing=u;const q=profs[u]||{display_name:'
  P.append(h);if(!own)ptab='posts';
  if(own){const tb=el('div','ptabs');[['posts',GRID,'Your posts'],['liked',HEART,'Videos you liked']].forEach(([k,ic,lb])=>{const b=el('button',ptab===k?'on':'');b.setAttribute('aria-label',lb);b.innerHTML=ic;b.onclick=()=>{ptab=k;showProfile(u)};tb.append(b)});P.append(tb)}
  const list=own&&ptab==='liked'?posts.filter(p=>isLk(p.id)):ps,g=el('div','grid');
- list.forEach(p=>{const t=el('button','tile'),vd=p.kind==='video',m=document.createElement(vd?'video':'img');t.setAttribute('aria-label',p.caption||'Open post');m.src=vd?p.url+'#t=0.1':p.url;if(vd){m.muted=true;m.preload='metadata';m.playsInline=true}if(p.fx&&FX[p.fx])m.style.filter=FX[p.fx];t.append(m);
-  t.onclick=()=>{if(mode!=='all')setMode('all');tab('home');const o=slides.find(z=>z.p.id===p.id);if(o)o.el.scrollIntoView()};g.append(t)});
+ list.forEach(p=>{const t=el('button','tile'),vd=p.kind==='video',m=document.createElement(vd?'video':'img');t.setAttribute('aria-label',p.caption||'Open post');m.src=vd?p.url+'#t=0.1':p.url;if(vd){m.muted=true;m.preload='metadata';m.playsInline=true}if(p.fx&&FX[p.fx])m.style.filter=FX[p.fx];t.append(m,el('span','vc','\u25b6 '+fmt(p.views||0)));
+  t.onclick=()=>{if(mode!=='all')setMode('all');tab('home');setTimeout(()=>{const o=slides.find(z=>z.p.id===p.id);if(o)o.el.scrollIntoView()},60)};g.append(t)});
  if(!list.length){const n=el('p','note',own&&ptab==='liked'?'Videos you like will show up here.':own?'Tap + to post your first photo or video.':'No posts yet.');n.style.cssText='padding:24px;grid-column:1/-1;text-align:center;color:#5d5670';g.append(n)}
  P.append(g);tab('prof')}
-document.querySelectorAll('.nav [data-t]').forEach(b=>b.onclick=()=>{if(b.dataset.t==='home'){tab('home');return}if(!me){quickJoin(true);return}showProfile(me.id);if(!mp())openProf()});
+document.querySelectorAll('.nav [data-t]').forEach(b=>b.onclick=()=>{if(b.dataset.t==='home'){tab('home');return}if(b.dataset.t==='games'){showGames();return}if(!me){quickJoin(true);return}showProfile(me.id);if(!mp())openProf()});
 function search(){const q=$('q').value.trim().toLowerCase().replace(/^@/,''),r=$('res');r.innerHTML='';
  const L=Object.values(profs).filter(v=>!q||v.username.includes(q)||v.display_name.toLowerCase().includes(q)||(v.bio||'').toLowerCase().includes(q)).sort((a,b)=>fc(b.id)-fc(a.id)).slice(0,30);
  if(!L.length){const n=el('p','note',q?'No accounts found.':'No accounts yet.');n.style.padding='20px 4px';r.append(n);return}
