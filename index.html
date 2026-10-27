@@ -65,7 +65,7 @@ button{font:inherit;color:inherit}:focus-visible{outline:2px solid var(--pop);ou
 
 <div class="sheet" id="auth"><div class="card" role="dialog" aria-label="Log in"><h2 id="auH">Welcome to Loopy</h2><p class="note" style="margin:0">Type a name to get started. No email or password.</p><input type="text" id="auE" placeholder="Your name" maxlength="30" autocomplete="off"><input type="password" id="auP" hidden><div class="row"><button class="btn" id="auGo">Continue</button><button class="btn alt" id="auT" hidden>I have an account</button><button class="btn alt" id="auX">Close</button></div><p class="note" id="auN"></p></div></div>
 
-<div class="sheet" id="prSheet"><div class="card" role="dialog" aria-label="Profile"><h2 id="pT">Create your account</h2><input type="text" id="pDn" maxlength="30" placeholder="Your name"><input type="text" id="pUn" maxlength="20" placeholder="Choose a username" autocapitalize="off" autocomplete="off"><input type="text" id="pBio" maxlength="80" placeholder="Bio (optional)"><div class="row" id="pSw"></div><div class="row"><span class="av" id="pPrev"></span><button class="btn alt" id="pPicB">Change photo</button><input type="file" id="pPic" accept="image/*" hidden></div><div class="row"><button class="btn" id="pSave">Save</button><button class="btn alt" id="pX">Cancel</button></div><p class="note" id="pN"></p></div></div>
+<div class="sheet" id="prSheet"><div class="card" role="dialog" aria-label="Profile"><h2 id="pT">Create your account</h2><input type="text" id="pDn" maxlength="30" placeholder="Your name"><input type="text" id="pUn" hidden><input type="text" id="pBio" maxlength="80" placeholder="Bio (optional)"><div class="row" id="pSw"></div><div class="row"><span class="av" id="pPrev"></span><button class="btn alt" id="pPicB">Change photo</button><input type="file" id="pPic" accept="image/*" hidden></div><div class="row"><button class="btn" id="pSave">Save</button><button class="btn alt" id="pX">Cancel</button></div><p class="note" id="pN"></p></div></div>
 
 <div class="sheet" id="mk"><div class="card" role="dialog" aria-label="New post"><h2>Post a photo or video</h2>
 <div id="mkS1"><div class="row"><button class="btn" id="mkCam">Camera</button><button class="btn alt" id="mkLib">Choose from library</button><button class="btn alt" id="mkX">Cancel</button></div><input type="file" id="inCam" accept="image/*,video/*" capture="environment" hidden><input type="file" id="inLib" accept="image/*,video/*" hidden></div>
@@ -94,7 +94,7 @@ function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');cle
 const mp=()=>me&&profs[me.id],isFol=u=>!!me&&follows.some(f=>f.follower_id===me.id&&f.followee_id===u),lc=id=>likes.filter(l=>l.post_id===id).length,isLk=id=>!!me&&likes.some(l=>l.post_id===id&&l.user_id===me.id),cc=id=>coms.filter(c=>c.post_id===id).length,fc=u=>follows.filter(f=>f.followee_id===u).length;
 const fmt=n=>n>=1e6?(n/1e6).toFixed(1).replace('.0','')+'M':n>=1e3?(n/1e3).toFixed(1).replace('.0','')+'K':String(n);
 function setAv(e,q){if(q&&q.pic){e.textContent='';e.style.background='center/cover no-repeat url("'+q.pic+'")'}else{e.textContent=((q&&q.display_name)||'?')[0].toUpperCase();e.style.background=(q&&q.color)||'#b3a9c9'}}
-function need(){if(me)return true;$('auN').textContent='';show('auth');return false}
+function need(){if(me)return true;quickJoin();return false}
 function needProf(){if(!need())return false;if(!mp()){openProf();return false}return true}
 
 // ---- data
@@ -173,7 +173,7 @@ function openProf(){const q=mp();$('pDn').value=q?q.display_name:'';$('pUn').val
  setAv($('pPrev'),{display_name:$('pDn').value||'?',color:swatch,pic:picUrl});$('pT').textContent=q?'Edit profile':'Create your account';$('pN').textContent='';show('prSheet')}
 $('pX').onclick=()=>hide('prSheet');$('pPicB').onclick=()=>$('pPic').click();
 $('pPic').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;$('pN').textContent='Uploading…';try{picUrl=await upload(f);setAv($('pPrev'),{display_name:$('pDn').value||'?',color:swatch,pic:picUrl});$('pN').textContent='Photo ready. Tap Save.'}catch(err){$('pN').textContent='Upload failed: '+(err.message||'try again')}};
-$('pSave').onclick=async()=>{const dn=$('pDn').value.trim(),un=$('pUn').value.trim().toLowerCase(),bio=$('pBio').value.trim();
+$('pSave').onclick=async()=>{const dn=$('pDn').value.trim(),un=(mp()&&mp().username)||('user'+Math.floor(10000+Math.random()*90000)),bio=$('pBio').value.trim();
  if(!dn){$('pN').textContent='Please enter your name.';return}if(!/^[a-z0-9_.]{3,20}$/.test(un)){$('pN').textContent='Usernames are 3 to 20 letters, numbers, _ or .';return}
  const row={username:un,display_name:dn,bio,color:swatch,pic:picUrl||null},ex=mp();
  const r=ex?await sb.from('profiles').update(row).eq('id',me.id):await sb.from('profiles').insert({id:me.id,...row});
@@ -202,6 +202,16 @@ $('mkGo').onclick=async()=>{if(!pending)return;$('mkGo').disabled=true;$('mkN').
   const r=await sb.from('posts').insert(row);if(r.error)throw r.error;hide('mk');toast('Posted!');sig='';await load();feed.scrollTo(0,0)}
  catch(e){$('mkN').textContent='Couldn’t post: '+(e.message||'try again')}$('mkGo').disabled=false};
 
+// ---- instant account
+async function quickJoin(showIt){if(window._mk)return;window._mk=1;toast('Setting up your account…');
+ let r=await sb.auth.signInAnonymously();
+ if(r.error||!r.data.session){const id=Math.random().toString(36).slice(2,12),pw=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+  r=await sb.auth.signUp({email:'guest'+id+'@loopy-login.com',password:pw});
+  if(r.error||!r.data.session){window._mk=0;toast('Sign-in is off in Supabase: turn on Allow anonymous sign-ins, or turn off Confirm email.');return}}
+ me=r.data.user;let ok=false;const nm='Guest '+Math.floor(1000+Math.random()*9000);
+ for(let k=0;k<5&&!ok;k++){const p=await sb.from('profiles').insert({id:me.id,username:'guest'+Math.floor(10000+Math.random()*90000),display_name:nm,color:SW[Math.floor(Math.random()*SW.length)]});if(!p.error)ok=true}
+ window._mk=0;if(!ok){toast('Couldn’t create your profile. Try again.');return}
+ await load();toast('You’re in as '+nm+'. Tap Edit profile to change your name.');if(showIt&&me)showProfile(me.id)}
 // ---- profile page, tabs, search
 function tab(n){const pf=n==='prof';$('prof').hidden=!pf;document.body.classList.toggle('inprof',pf);document.querySelectorAll('.nav [data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===(pf?'me':'home')));
  if(active&&active.vid){pf?active.vid.pause():active.vid.play().catch(()=>{})}if(!pf)viewing=null}
@@ -209,7 +219,7 @@ function showProfile(u){if(!u)return;viewing=u;const q=profs[u]||{display_name:'
  const h=el('div','ph'),av=el('span','av');setAv(av,q);const lk=ps.reduce((a,p)=>a+lc(p.id),0);
  h.append(av,el('h2',null,q.display_name),el('p','bio','@'+q.username+(q.bio?' · '+q.bio:'')));
  const st=el('div','stats');[[ps.length,'Posts'],[fc(u),'Followers'],[follows.filter(f=>f.follower_id===u).length,'Following'],[lk,'Likes']].forEach(([n,l])=>{const d=el('div');d.append(el('b',null,String(n)),el('span',null,l));st.append(d)});h.append(st);
- if(own){const e=el('button','btn alt','Edit profile');e.onclick=openProf;const o=el('button','btn alt','Log out');o.onclick=async()=>{await sb.auth.signOut();tab('home');toast('Logged out')};const r=el('div','row');r.style.justifyContent='center';r.append(e);if(!me.is_anonymous)r.append(o);h.append(r)}
+ if(own){const e=el('button','btn alt','Edit profile');e.onclick=openProf;const o=el('button','btn alt','Log out');o.onclick=async()=>{await sb.auth.signOut();tab('home');toast('Logged out')};const r=el('div','row');r.style.justifyContent='center';r.append(e);if(!me.is_anonymous&&!(me.email||'').endsWith('@loopy-login.com'))r.append(o);h.append(r)}
  else{const on=isFol(u),f=el('button','btn'+(on?' alt':''),on?'Following':'Follow');f.onclick=()=>toggleFollow(u);h.append(f)}
  P.append(h);if(!own)ptab='posts';
  if(own){const tb=el('div','ptabs');[['posts',GRID,'Your posts'],['liked',HEART,'Videos you liked']].forEach(([k,ic,lb])=>{const b=el('button',ptab===k?'on':'');b.setAttribute('aria-label',lb);b.innerHTML=ic;b.onclick=()=>{ptab=k;showProfile(u)};tb.append(b)});P.append(tb)}
@@ -218,7 +228,7 @@ function showProfile(u){if(!u)return;viewing=u;const q=profs[u]||{display_name:'
   t.onclick=()=>{if(mode!=='all')setMode('all');tab('home');const o=slides.find(z=>z.p.id===p.id);if(o)o.el.scrollIntoView()};g.append(t)});
  if(!list.length){const n=el('p','note',own&&ptab==='liked'?'Videos you like will show up here.':own?'Tap + to post your first photo or video.':'No posts yet.');n.style.cssText='padding:24px;grid-column:1/-1;text-align:center;color:#5d5670';g.append(n)}
  P.append(g);tab('prof')}
-document.querySelectorAll('.nav [data-t]').forEach(b=>b.onclick=()=>{if(b.dataset.t==='home'){tab('home');return}if(!need())return;showProfile(me.id);if(!mp())openProf()});
+document.querySelectorAll('.nav [data-t]').forEach(b=>b.onclick=()=>{if(b.dataset.t==='home'){tab('home');return}if(!me){quickJoin(true);return}showProfile(me.id);if(!mp())openProf()});
 function search(){const q=$('q').value.trim().toLowerCase().replace(/^@/,''),r=$('res');r.innerHTML='';
  const L=Object.values(profs).filter(v=>!q||v.username.includes(q)||v.display_name.toLowerCase().includes(q)||(v.bio||'').toLowerCase().includes(q)).sort((a,b)=>fc(b.id)-fc(a.id)).slice(0,30);
  if(!L.length){const n=el('p','note',q?'No accounts found.':'No accounts yet.');n.style.padding='20px 4px';r.append(n);return}
